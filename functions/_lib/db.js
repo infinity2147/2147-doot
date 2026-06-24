@@ -3,6 +3,13 @@ const EVENT_COLS = [
   "utm_source", "utm_medium", "utm_campaign", "country", "city", "asn_org", "ip_hash", "ua",
 ];
 
+export function rangeToSince(range, now = Date.now()) {
+  const day = 86400000;
+  if (range === "today") return now - day;
+  if (range === "30d") return now - 30 * day;
+  return now - 7 * day; // default 7d
+}
+
 export async function insertEvents(DB, rows) {
   if (!rows.length) return;
   const placeholders = "(" + EVENT_COLS.map(() => "?").join(",") + ")";
