@@ -1,7 +1,7 @@
 const ALLOWED = new Set([
   "page_view", "cta_click", "nav_click", "scroll_depth", "section_view",
   "faq_open", "demo_view", "demo_step", "time_on_page", "slot_booked",
-  "form_start", "form_submit", "mailto_click", "return_visit",
+  "form_start", "form_submit", "mailto_click", "return_visit", "contact_click",
 ]);
 
 export function validateBatch(body) {
@@ -11,7 +11,7 @@ export function validateBatch(body) {
   if (body.events.length > 50) return { ok: false, error: "too many events" };
   const events = [];
   for (const e of body.events) {
-    if (!e || !ALLOWED.has(e.event)) return { ok: false, error: "bad event: " + (e && e.event) };
+    if (!e || !ALLOWED.has(e.event)) continue; // silently drop unknown events
     events.push({
       event: e.event,
       props: e.props && typeof e.props === "object" ? e.props : {},

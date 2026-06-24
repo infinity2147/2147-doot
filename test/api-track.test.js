@@ -20,6 +20,10 @@ test("stores a valid batch and returns 204", async () => {
   const rows = await eventsForVisitor(env.DB, "vt1");
   expect(rows).toHaveLength(1);
   expect(rows[0].event).toBe("cta_click");
+  // Privacy invariant: ip_hash must be a 64-char lowercase hex string, never the raw IP
+  const row = await env.DB.prepare("SELECT ip_hash FROM events WHERE visitor_id='vt1'").first();
+  expect(row.ip_hash).toMatch(/^[0-9a-f]{64}$/);
+  expect(row.ip_hash).not.toBe("9.9.9.9");
 });
 
 test("rejects a bad batch with 400", async () => {

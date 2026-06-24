@@ -11,8 +11,17 @@ test("rejects missing visitor_id", () => {
   expect(validateBatch({ events: [] }).ok).toBe(false);
 });
 
-test("rejects unknown event name", () => {
-  expect(validateBatch({ visitor_id: "v1", events: [{ event: "evil" }] }).ok).toBe(false);
+test("drops unknown events while keeping valid ones (batch still succeeds)", () => {
+  const r = validateBatch({ visitor_id: "v1", events: [{ event: "page_view" }, { event: "evil" }, { event: "cta_click" }] });
+  expect(r.ok).toBe(true);
+  expect(r.events).toHaveLength(2);
+  expect(r.events.map((e) => e.event)).toEqual(["page_view", "cta_click"]);
+});
+
+test("accepts contact_click", () => {
+  const r = validateBatch({ visitor_id: "v1", events: [{ event: "contact_click" }] });
+  expect(r.ok).toBe(true);
+  expect(r.events).toHaveLength(1);
 });
 
 test("rejects more than 50 events", () => {

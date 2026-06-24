@@ -580,7 +580,7 @@
         body: JSON.stringify({ visitor_id: vid, session_id: sid, path: location.pathname,
           name: fd.get("name"), email: fd.get("email"), message: fd.get("message") }),
       }).then(function (r) { return r.json(); }).then(function (j) {
-        if (j && j.ok) { t()("form_submit", {}); msg.textContent = "Got it — I'll reply within a day."; form.reset(); }
+        if (j && j.ok) { msg.textContent = "Got it — I'll reply within a day."; form.reset(); }
         else { msg.textContent = "Something went wrong — email asatianant2678@gmail.com directly."; }
       }).catch(function () { msg.textContent = "Network issue — email asatianant2678@gmail.com directly."; });
     });

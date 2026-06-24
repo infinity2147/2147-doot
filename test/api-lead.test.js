@@ -37,4 +37,20 @@ test("creates a lead without visitor_id using synthetic form_submit event", asyn
   const lead = await env.DB.prepare("SELECT * FROM leads WHERE id = ?").bind(json.id).first();
   expect(lead.company).toBe("Beta");
   expect(lead.intent_score).toBeGreaterThanOrEqual(100);
+  const ev = await env.DB.prepare("SELECT count(*) c FROM events WHERE event='form_submit' AND visitor_id IS NULL").first();
+  expect(ev.c).toBeGreaterThanOrEqual(1);
+});
+
+test("rejects overly long fields with 400 and writes no lead", async () => {
+  const longName = "a".repeat(201);
+  const res = await onRequestPost({ request: post({ name: longName, email: "x@valid.io" }), env });
+  expect(res.status).toBe(400);
+  const lead = await env.DB.prepare("SELECT count(*) c FROM leads WHERE name = ?").bind(longName).first();
+  expect(lead.c).toBe(0);
+});
+
+test("rejects message longer than 2000 chars with 400", async () => {
+  const longMsg = "m".repeat(2001);
+  const res = await onRequestPost({ request: post({ name: "Valid", email: "v@ok.io", message: longMsg }), env });
+  expect(res.status).toBe(400);
 });

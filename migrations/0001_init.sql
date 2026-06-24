@@ -1,7 +1,7 @@
 CREATE TABLE events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   ts INTEGER NOT NULL,
-  visitor_id TEXT NOT NULL,
+  visitor_id TEXT,
   session_id TEXT,
   event TEXT NOT NULL,
   props TEXT,
