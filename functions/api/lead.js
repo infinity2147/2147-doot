@@ -21,12 +21,14 @@ export async function onRequestPost({ request, env }) {
   const now = Date.now();
   const visitor_id = body.visitor_id || null;
 
-  await insertEvents(env.DB, [{
-    ts: now, visitor_id, session_id: body.session_id || null, event: "form_submit",
-    props: JSON.stringify({}), path: body.path || null, referrer: null,
-    utm_source: null, utm_medium: null, utm_campaign: null,
-    country: geo.country, city: geo.city, asn_org: geo.asn_org, ip_hash: null, ua: null,
-  }]);
+  if (visitor_id) {
+    await insertEvents(env.DB, [{
+      ts: now, visitor_id, session_id: body.session_id || null, event: "form_submit",
+      props: JSON.stringify({}), path: body.path || null, referrer: null,
+      utm_source: null, utm_medium: null, utm_campaign: null,
+      country: geo.country, city: geo.city, asn_org: geo.asn_org, ip_hash: null, ua: null,
+    }]);
+  }
 
   const evs = visitor_id ? await eventsForVisitor(env.DB, visitor_id) : [{ event: "form_submit", props: "{}" }];
   const { score } = intentScore(evs.map((e) => ({ event: e.event, props: JSON.parse(e.props || "{}") })));

@@ -37,8 +37,6 @@ test("creates a lead without visitor_id using synthetic form_submit event", asyn
   const lead = await env.DB.prepare("SELECT * FROM leads WHERE id = ?").bind(json.id).first();
   expect(lead.company).toBe("Beta");
   expect(lead.intent_score).toBeGreaterThanOrEqual(100);
-  const ev = await env.DB.prepare("SELECT count(*) c FROM events WHERE event='form_submit' AND visitor_id IS NULL").first();
-  expect(ev.c).toBeGreaterThanOrEqual(1);
 });
 
 test("rejects overly long fields with 400 and writes no lead", async () => {
