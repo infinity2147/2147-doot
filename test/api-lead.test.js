@@ -28,3 +28,13 @@ test("rejects missing name/email", async () => {
   const res = await onRequestPost({ request: post({ visitor_id: "x" }), env });
   expect(res.status).toBe(400);
 });
+
+test("creates a lead without visitor_id using synthetic form_submit event", async () => {
+  const res = await onRequestPost({ request: post({ name: "NoVid", email: "x@beta.io" }), env });
+  expect(res.status).toBe(200);
+  const json = await res.json();
+  expect(json.ok).toBe(true);
+  const lead = await env.DB.prepare("SELECT * FROM leads WHERE id = ?").bind(json.id).first();
+  expect(lead.company).toBe("Beta");
+  expect(lead.intent_score).toBeGreaterThanOrEqual(100);
+});

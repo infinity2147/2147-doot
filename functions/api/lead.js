@@ -28,7 +28,7 @@ export async function onRequestPost({ request, env }) {
     }]);
   }
 
-  const evs = visitor_id ? await eventsForVisitor(env.DB, visitor_id) : [{ event: "form_submit", props: {} }];
+  const evs = visitor_id ? await eventsForVisitor(env.DB, visitor_id) : [{ event: "form_submit", props: "{}" }];
   const { score } = intentScore(evs.map((e) => ({ event: e.event, props: JSON.parse(e.props || "{}") })));
 
   const id = await insertLead(env.DB, {
