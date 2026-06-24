@@ -1,0 +1,12 @@
+name = "doot"
+compatibility_date = "2026-06-01"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "."
+
+[vars]
+SITE_ORIGIN = "http://localhost:8788"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "doot-analytics"
+database_id = "REPLACE_AFTER_CREATE"
