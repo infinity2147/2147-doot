@@ -1,6 +1,7 @@
 import { env } from "cloudflare:test";
 import { beforeAll, expect, test } from "vitest";
 import { applySchema } from "./helpers/applySchema.js";
+import { insertEvents, eventsForVisitor } from "../functions/_lib/db.js";
 
 beforeAll(async () => { await applySchema(env.DB); });
 
@@ -11,4 +12,17 @@ test("schema creates events and leads tables", async () => {
   const names = results.map((r) => r.name);
   expect(names).toContain("events");
   expect(names).toContain("leads");
+});
+
+test("insertEvents writes rows and eventsForVisitor reads them back", async () => {
+  await insertEvents(env.DB, [{
+    ts: 1000, visitor_id: "vX", session_id: "s1", event: "page_view",
+    props: JSON.stringify({ a: 1 }), path: "/", referrer: "direct",
+    utm_source: null, utm_medium: null, utm_campaign: null,
+    country: "IN", city: "Pune", asn_org: "Jio", ip_hash: "abc", ua: "UA",
+  }]);
+  const rows = await eventsForVisitor(env.DB, "vX");
+  expect(rows).toHaveLength(1);
+  expect(rows[0].event).toBe("page_view");
+  expect(JSON.parse(rows[0].props)).toEqual({ a: 1 });
 });
