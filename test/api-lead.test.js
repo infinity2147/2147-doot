@@ -1,0 +1,30 @@
+import { env } from "cloudflare:test";
+import { beforeAll, expect, test } from "vitest";
+import { applySchema } from "./helpers/applySchema.js";
+import { onRequestPost } from "../functions/api/lead.js";
+
+beforeAll(async () => { await applySchema(env.DB); });
+
+function post(body) {
+  return new Request("http://localhost/api/lead", {
+    method: "POST", headers: { "Content-Type": "application/json", "CF-Connecting-IP": "8.8.8.8" },
+    body: JSON.stringify(body),
+  });
+}
+
+test("creates a lead with derived company and intent score, plus a form_submit event", async () => {
+  const res = await onRequestPost({ request: post({ visitor_id: "vc1", name: "Priya", email: "priya@acme.io", message: "hi" }), env });
+  expect(res.status).toBe(200);
+  const json = await res.json();
+  expect(json.ok).toBe(true);
+  const lead = await env.DB.prepare("SELECT * FROM leads WHERE id = ?").bind(json.id).first();
+  expect(lead.company).toBe("Acme");
+  expect(lead.intent_score).toBeGreaterThanOrEqual(100); // form_submit alone = 100
+  const ev = await env.DB.prepare("SELECT count(*) c FROM events WHERE visitor_id='vc1' AND event='form_submit'").first();
+  expect(ev.c).toBe(1);
+});
+
+test("rejects missing name/email", async () => {
+  const res = await onRequestPost({ request: post({ visitor_id: "x" }), env });
+  expect(res.status).toBe(400);
+});
