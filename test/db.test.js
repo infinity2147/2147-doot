@@ -1,7 +1,7 @@
 import { env } from "cloudflare:test";
 import { beforeAll, expect, test } from "vitest";
 import { applySchema } from "./helpers/applySchema.js";
-import { insertEvents, eventsForVisitor } from "../functions/_lib/db.js";
+import { insertEvents, eventsForVisitor, insertLead } from "../functions/_lib/db.js";
 
 beforeAll(async () => { await applySchema(env.DB); });
 
@@ -25,4 +25,15 @@ test("insertEvents writes rows and eventsForVisitor reads them back", async () =
   expect(rows).toHaveLength(1);
   expect(rows[0].event).toBe("page_view");
   expect(JSON.parse(rows[0].props)).toEqual({ a: 1 });
+});
+
+test("insertLead returns an id and stores the row", async () => {
+  const id = await insertLead(env.DB, {
+    ts: 2000, visitor_id: "vL", name: "Priya", email: "priya@acme.io", company: "Acme",
+    message: "interested", status: "new", intent_score: 50, country: "IN", city: "Pune", asn_org: "Jio",
+  });
+  expect(typeof id).toBe("number");
+  const row = await env.DB.prepare("SELECT * FROM leads WHERE id = ?").bind(id).first();
+  expect(row.name).toBe("Priya");
+  expect(row.status).toBe("new");
 });

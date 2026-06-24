@@ -17,3 +17,11 @@ export async function eventsForVisitor(DB, visitor_id) {
     .bind(visitor_id).all();
   return results;
 }
+
+const LEAD_COLS = ["ts","visitor_id","name","email","company","message","status","intent_score","country","city","asn_org"];
+
+export async function insertLead(DB, lead) {
+  const sql = `INSERT INTO leads (${LEAD_COLS.join(",")}) VALUES (${LEAD_COLS.map(() => "?").join(",")})`;
+  const res = await DB.prepare(sql).bind(...LEAD_COLS.map((c) => lead[c] ?? null)).run();
+  return res.meta.last_row_id;
+}
