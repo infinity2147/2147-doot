@@ -506,6 +506,17 @@
     <p class="rise d1">Ten minutes. We'll show you exactly what it would do for your pipeline — and you already have proof in your inbox.</p>
     <a class="btn btn-primary rise d2" href="mailto:asatianant2678@gmail.com?subject=A%20look%20at%20Doot&body=Hi%20Anant%2C%0D%0A%0D%0AI%20saw%20the%20Doot%20page%20and%20would%20like%20a%2010-minute%20look%20at%20what%20it%20could%20do%20for%20our%20outbound.%0D%0A%0D%0AWhat%20times%20work%20for%20you%20this%20week%3F%0D%0A%0D%0AQuick%20context%20(company%20%2F%20what%20we%20sell%20%2F%20how%20we%20do%20outbound%20today)%3A%0D%0A" data-track="cta_click" data-loc="final">Book a 10-min look</a>
     <p class="risk rise d2">No deck. No obligation. Just a look.</p>
+    <form id="lead-form" class="lead-form rise d2" novalidate
+          style="margin:26px auto 0;max-width:440px;display:grid;gap:10px;text-align:left">
+      <input name="name" required placeholder="Your name"
+             style="padding:.8rem 1rem;border-radius:11px;border:1px solid var(--line-2);font:inherit">
+      <input name="email" type="email" required placeholder="Work email"
+             style="padding:.8rem 1rem;border-radius:11px;border:1px solid var(--line-2);font:inherit">
+      <textarea name="message" rows="2" placeholder="What do you sell / how do you do outbound today? (optional)"
+             style="padding:.8rem 1rem;border-radius:11px;border:1px solid var(--line-2);font:inherit;resize:vertical"></textarea>
+      <button type="submit" class="btn btn-primary" style="justify-content:center">Book a 10-min look</button>
+      <p class="risk" id="lead-msg" style="margin-top:4px">We track on-page interactions to improve Doot. No deck, no obligation.</p>
+    </form>
   </div>
 </section>
 
@@ -554,6 +565,26 @@
   var start = Date.now();
   window.addEventListener("pagehide", function () { t()("time_on_page", { seconds: Math.round((Date.now() - start) / 1000) }); });
   window.addEventListener("message", function (e) { if (e.data && e.data.event === "calendly.event_scheduled") t()("slot_booked", { source: "calendly" }); });
+  var form = document.getElementById("lead-form");
+  if (form) {
+    var started = false;
+    form.addEventListener("focusin", function () { if (!started) { started = true; t()("form_start", {}); } });
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var fd = new FormData(form);
+      var msg = document.getElementById("lead-msg");
+      var vid = window.localStorage.getItem("doot_vid");
+      var sid = window.sessionStorage.getItem("doot_sid");
+      fetch("/api/lead", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visitor_id: vid, session_id: sid, path: location.pathname,
+          name: fd.get("name"), email: fd.get("email"), message: fd.get("message") }),
+      }).then(function (r) { return r.json(); }).then(function (j) {
+        if (j && j.ok) { t()("form_submit", {}); msg.textContent = "Got it — I'll reply within a day."; form.reset(); }
+        else { msg.textContent = "Something went wrong — email asatianant2678@gmail.com directly."; }
+      }).catch(function () { msg.textContent = "Network issue — email asatianant2678@gmail.com directly."; });
+    });
+  }
 })();
 </script>
 
