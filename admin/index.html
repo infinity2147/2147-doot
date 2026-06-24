@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Doot — Admin</title>
+<style>
+  :root{--ink:#0F1635;--ember:#EC7D1E;--paper:#F6F8FC;--line:#E3E8F3;--muted:#6E7699}
+  *{box-sizing:border-box;margin:0;font-family:system-ui,sans-serif}
+  body{background:var(--paper);color:var(--ink);padding:24px;max-width:1100px;margin:0 auto}
+  h1{font-size:1.4rem;margin-bottom:4px}.sub{color:var(--muted);margin-bottom:18px;font-size:.9rem}
+  .tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+  .tabs button{padding:.5rem .9rem;border:1px solid var(--line);background:#fff;border-radius:8px;cursor:pointer}
+  .tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  select#range{margin-left:auto;padding:.4rem;border-radius:8px;border:1px solid var(--line)}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px}
+  .card .n{font-size:1.8rem;font-weight:700}.card .l{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em}
+  table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);font-size:.9rem}
+  th{background:#fff;color:var(--muted);font-weight:600}
+  .badge{padding:2px 8px;border-radius:999px;font-size:.72rem;font-weight:700}
+  .hot{background:#FFE0CC;color:#B85F0C}.warm{background:#FFF3D6;color:#9a6b00}.cold{background:#EEF2FB;color:#6E7699}
+  tr.click{cursor:pointer}tr.click:hover{background:var(--paper)}
+  #drawer{position:fixed;top:0;right:0;height:100%;width:min(460px,92vw);background:#fff;border-left:1px solid var(--line);padding:20px;overflow:auto;transform:translateX(100%);transition:transform .25s;box-shadow:-20px 0 50px -30px rgba(0,0,0,.4)}
+  #drawer.open{transform:none}#drawer .x{float:right;cursor:pointer;color:var(--muted)}
+  .tl{list-style:none;margin-top:12px}.tl li{padding:6px 0;border-bottom:1px solid var(--line);font-size:.85rem}
+  .hide{display:none}
+</style></head><body>
+<h1>Doot — Admin</h1><div class="sub">Custom analytics · leads · visitors</div>
+<div class="tabs">
+  <button data-tab="overview" class="on">Overview</button>
+  <button data-tab="leads">Lead Inbox</button>
+  <button data-tab="visitors">Visitors</button>
+  <button data-tab="events">Raw events</button>
+  <select id="range"><option value="today">Today</option><option value="7d" selected>7 days</option><option value="30d">30 days</option></select>
+</div>
+<div id="view"></div>
+<div id="drawer"><span class="x" onclick="closeDrawer()">✕ close</span><div id="drawer-body"></div></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+let tab = "overview";
+const range = () => $("#range").value;
+const fmt = (ts) => new Date(ts).toLocaleString();
+const badge = (b) => `<span class="badge ${b}">${b}</span>`;
+
+async function get(p){ const r = await fetch(p); return r.json(); }
+
+async function render(){
+  const view = $("#view");
+  if (tab === "overview"){
+    const d = await get(`/admin/api/overview?range=${range()}`);
+    const ev = d.by_event || {};
+    view.innerHTML = `<div class="cards">
+      <div class="card"><div class="n">${d.visitors}</div><div class="l">Visitors</div></div>
+      <div class="card"><div class="n">${d.sessions}</div><div class="l">Sessions</div></div>
+      <div class="card"><div class="n">${d.conversions}</div><div class="l">Conversions</div></div>
+      <div class="card"><div class="n">${d.visitors ? ((d.conversions/d.visitors)*100).toFixed(1) : 0}%</div><div class="l">Conv. rate</div></div>
+    </div>
+    <h3>Funnel</h3><table><tr><th>Step</th><th>Count</th></tr>
+      ${["page_view","scroll_depth","demo_view","cta_click","form_submit"].map(k=>`<tr><td>${k}</td><td>${ev[k]||0}</td></tr>`).join("")}
+    </table>
+    <h3 style="margin-top:18px">Top countries</h3><table><tr><th>Country</th><th>Visitors</th></tr>
+      ${(d.top_countries||[]).map(c=>`<tr><td>${c.country}</td><td>${c.n}</td></tr>`).join("")||"<tr><td colspan=2>—</td></tr>"}
+    </table>`;
+  } else if (tab === "leads"){
+    const d = await get(`/admin/api/leads`);
+    view.innerHTML = `<table><tr><th>Name</th><th>Company</th><th>Email</th><th>Intent</th><th>Status</th><th>When</th></tr>
+      ${d.leads.map(l=>`<tr class="click" onclick="openLead(${l.id})">
+        <td>${l.name||"—"}</td><td>${l.company||"—"}</td><td>${l.email||"—"}</td>
+        <td>${l.intent_score??0}</td>
+        <td><select onclick="event.stopPropagation()" onchange="setStatus(${l.id},this.value)">
+          ${["new","replied","booked","closed"].map(s=>`<option ${s===l.status?"selected":""}>${s}</option>`).join("")}
+        </select></td><td>${fmt(l.ts)}</td></tr>`).join("")||"<tr><td colspan=6>No leads yet</td></tr>"}
+    </table>`;
+  } else if (tab === "visitors"){
+    const d = await get(`/admin/api/visitors?range=${range()}`);
+    view.innerHTML = `<table><tr><th>Visitor</th><th>Identity</th><th>Events</th><th>Intent</th><th>Last seen</th></tr>
+      ${d.visitors.map(v=>`<tr class="click" onclick="openVisitor('${v.visitor_id}')">
+        <td>${v.visitor_id.slice(0,8)}</td>
+        <td>${v.asn_org?`${v.asn_org}${v.city?", "+v.city:""}`:(v.country||"anonymous")}</td>
+        <td>${v.events}</td><td>${badge(v.intent.bucket)} ${v.intent.score}</td><td>${fmt(v.last_ts)}</td></tr>`).join("")||"<tr><td colspan=5>No visitors yet</td></tr>"}
+    </table>`;
+  } else {
+    const d = await get(`/admin/api/events?range=${range()}`);
+    view.innerHTML = `<table><tr><th>When</th><th>Event</th><th>Visitor</th><th>Props</th></tr>
+      ${d.events.map(e=>`<tr><td>${fmt(e.ts)}</td><td>${e.event}</td><td>${(e.visitor_id||"").slice(0,8)}</td><td><code>${(e.props||"").slice(0,80)}</code></td></tr>`).join("")||"<tr><td colspan=4>No events</td></tr>"}
+    </table>`;
+  }
+}
+async function openLead(id){
+  const d = await get(`/admin/api/lead/${id}`); const l = d.lead;
+  $("#drawer-body").innerHTML = `<h2>${l.name||"—"}</h2><div class="sub">${l.email||""} · ${l.company||""}</div>
+    <p><b>Message:</b> ${l.message||"—"}</p><p><b>Intent:</b> ${l.intent_score}</p>
+    <h3>Timeline</h3><ul class="tl">${d.timeline.map(t=>`<li>${fmt(t.ts)} — ${t.event} <code>${(t.props||"").slice(0,60)}</code></li>`).join("")}</ul>`;
+  $("#drawer").classList.add("open");
+}
+async function openVisitor(vid){
+  const d = await get(`/admin/api/events?visitor_id=${vid}&range=30d`);
+  $("#drawer-body").innerHTML = `<h2>${vid.slice(0,8)}</h2><h3>Timeline</h3>
+    <ul class="tl">${d.events.slice().reverse().map(t=>`<li>${fmt(t.ts)} — ${t.event} <code>${(t.props||"").slice(0,60)}</code></li>`).join("")}</ul>`;
+  $("#drawer").classList.add("open");
+}
+function closeDrawer(){ $("#drawer").classList.remove("open"); }
+async function setStatus(id, status){ await fetch(`/admin/api/lead/${id}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body: JSON.stringify({status}) }); }
+
+document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{
+  tab = b.dataset.tab; document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b)); render();
+}));
+$("#range").addEventListener("change", render);
+render();
+</script>
+</body></html>
