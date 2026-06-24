@@ -528,70 +528,36 @@
   </div>
 </footer>
 
+<script type="module" src="/assets/doot-analytics.js"></script>
 <script>
-/* ---------------- Doot analytics: tracks every meaningful interaction ---------------- */
-(function(){
-  function track(event, props){
-    props = props || {};
-    try{
-      var payload = Object.assign({event:event, ts:Date.now(), path:location.pathname}, props);
-      window.dataLayer = window.dataLayer || [];
-      window.dataLayer.push(payload);                                   // GA4 / GTM
-      if(typeof window.gtag === 'function') window.gtag('event', event, props);
-      if(window.posthog && window.posthog.capture) window.posthog.capture(event, props);
-      if(typeof window.clarity === 'function') window.clarity('event', event);  // Clarity custom tag
-      if(!window.gtag && !window.posthog && typeof window.clarity!=='function')
-        console.debug('[doot:track]', event, props);                   // visible before you wire a provider
-    }catch(e){ console.warn('track failed', e); }
-  }
-  window.dootTrack = track;
-
-  // capture campaign source once (utm_* + referrer)
-  var qs = new URLSearchParams(location.search), utm = {};
-  ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'].forEach(function(k){ if(qs.get(k)) utm[k]=qs.get(k); });
-
-  window.addEventListener('load', function(){
-    track('page_view', Object.assign({referrer: document.referrer || 'direct'}, utm));
+/* DOM → dootTrack bridges (kept here so they live with the markup) */
+(function () {
+  function t(){ return window.dootTrack || function(){}; }
+  document.addEventListener("click", function (e) {
+    var el = e.target.closest("[data-track]"); if (!el) return;
+    var name = el.getAttribute("data-track");
+    t()(name, { location: el.getAttribute("data-loc") || "", label: (el.textContent || "").trim().slice(0, 60) });
+    if (el.getAttribute("href") && el.getAttribute("href").indexOf("mailto:") === 0) t()("mailto_click", { location: el.getAttribute("data-loc") || "" });
   });
-
-  // EVERY tagged click (CTAs, nav, contact)
-  document.addEventListener('click', function(e){
-    var el = e.target.closest('[data-track]');
-    if(!el) return;
-    track(el.getAttribute('data-track'), {
-      location: el.getAttribute('data-loc') || '',
-      label: (el.textContent || '').trim().slice(0,60)
-    });
+  var marks = [25, 50, 75, 100], hit = {};
+  window.addEventListener("scroll", function () {
+    var sc = (window.scrollY + window.innerHeight) / document.body.scrollHeight * 100;
+    marks.forEach(function (m) { if (sc >= m && !hit[m]) { hit[m] = 1; t()("scroll_depth", { percent: m }); } });
+  }, { passive: true });
+  var so = new IntersectionObserver(function (es) {
+    es.forEach(function (en) { if (en.isIntersecting) { t()("section_view", { section: en.target.id }); so.unobserve(en.target); } });
+  }, { threshold: .4 });
+  document.querySelectorAll("section[id]").forEach(function (s) { so.observe(s); });
+  document.querySelectorAll("#faq details").forEach(function (d) {
+    d.addEventListener("toggle", function () { if (d.open) t()("faq_open", { q: (d.querySelector("summary").textContent || "").trim().slice(0, 50) }); });
   });
-
-  // scroll depth (25/50/75/100)
-  var marks=[25,50,75,100], hit={};
-  window.addEventListener('scroll', function(){
-    var sc=(window.scrollY+window.innerHeight)/document.body.scrollHeight*100;
-    marks.forEach(function(m){ if(sc>=m && !hit[m]){ hit[m]=1; track('scroll_depth',{percent:m}); } });
-  }, {passive:true});
-
-  // which sections actually get seen
-  var so=new IntersectionObserver(function(es){
-    es.forEach(function(en){ if(en.isIntersecting){ track('section_view',{section:en.target.id}); so.unobserve(en.target); } });
-  },{threshold:.4});
-  document.querySelectorAll('section[id]').forEach(function(s){ so.observe(s); });
-
-  // FAQ opens = buying-intent signal
-  document.querySelectorAll('#faq details').forEach(function(d){
-    d.addEventListener('toggle', function(){ if(d.open) track('faq_open',{q:(d.querySelector('summary').textContent||'').trim().slice(0,50)}); });
-  });
-
-  // time on page
-  var start=Date.now();
-  window.addEventListener('pagehide', function(){ track('time_on_page',{seconds:Math.round((Date.now()-start)/1000)}); });
-
-  // CONVERSION: fires when someone books in an embedded Calendly
-  window.addEventListener('message', function(e){
-    if(e.data && e.data.event === 'calendly.event_scheduled') track('slot_booked',{source:'calendly'});
-  });
+  var start = Date.now();
+  window.addEventListener("pagehide", function () { t()("time_on_page", { seconds: Math.round((Date.now() - start) / 1000) }); });
+  window.addEventListener("message", function (e) { if (e.data && e.data.event === "calendly.event_scheduled") t()("slot_booked", { source: "calendly" }); });
 })();
+</script>
 
+<script>
 /* ---------------- motion: nav border, reveals, hero arc ---------------- */
 (function(){
   var nav=document.getElementById('nav');
