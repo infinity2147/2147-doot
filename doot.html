@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Doot — the messenger for modern sales</title>
+<meta name="description" content="Doot is an autonomous sales agent for B2B teams. It finds companies that fit you, reaches the person who can say yes, writes a real message, and follows up — so your pipeline fills without adding headcount.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- =================================================================
+     ANALYTICS — paste your IDs here to turn tracking on.
+     Recommended stack (all have free tiers):
+       1) Microsoft Clarity  → records EVERY click + scroll, heatmaps, session replays
+       2) Google Analytics 4 → named events (page_view, cta_click, slot_booked...)
+       3) (optional) PostHog → product analytics + funnels
+     Until you paste a provider, events still log to the browser console
+     so you can verify they fire (open DevTools → Console).
+     ================================================================= -->
+
+<!-- (1) Microsoft Clarity — replace CLARITY_ID -->
+<!--
+<script type="text/javascript">
+  (function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+  t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+  y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","CLARITY_ID");
+</script>
+-->
+
+<!-- (2) Google Analytics 4 — replace G-XXXXXXX -->
+<!--
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXX');
+</script>
+-->
+
+<style>
+  :root{
+    --paper:#F6F8FC;
+    --surface:#FFFFFF;
+    --tint:#EEF2FB;        /* soft blue trust tint */
+    --ink:#0F1635;         /* deep navy = trust + primary text */
+    --ink-2:#27305A;
+    --body:#444C70;        /* body text */
+    --muted:#6E7699;
+    --line:#E3E8F3;
+    --line-2:#D2DAEC;
+    --ember:#EC7D1E;       /* single action accent: warm, high-contrast */
+    --ember-deep:#B85F0C;  /* accent text on light (contrast-safe) */
+    --ember-soft:#FFE9D2;
+    --glow:rgba(236,125,30,.34);
+    --maxw:1120px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--paper);color:var(--body);
+    font-family:"Plus Jakarta Sans",system-ui,sans-serif;
+    font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+  }
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 26px}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:var(--ember);color:#fff}
+  .serif{font-family:"Instrument Serif",Georgia,serif;font-weight:400}
+  .mono{font-family:"IBM Plex Mono",monospace}
+
+  .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--ember-deep);display:inline-flex;align-items:center;gap:.6em}
+  .eyebrow::before{content:"";width:20px;height:1px;background:var(--ember)}
+
+  a:focus-visible,button:focus-visible{outline:2px solid var(--ember);outline-offset:3px;border-radius:5px}
+
+  .btn{display:inline-flex;align-items:center;gap:.5em;font-family:"Plus Jakarta Sans",sans-serif;
+    font-weight:700;font-size:.95rem;padding:.8rem 1.25rem;border-radius:11px;cursor:pointer;
+    border:1px solid transparent;transition:transform .16s ease,box-shadow .25s ease,background .2s}
+  .btn-primary{background:var(--ember);color:#fff;box-shadow:0 8px 22px -10px var(--glow)}
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 14px 34px -10px var(--glow)}
+  .btn-ghost{border-color:var(--line-2);color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--ember);color:var(--ember-deep)}
+  .risk{font-size:.84rem;color:var(--muted);margin-top:12px}
+
+  /* logo mark */
+  .mark{display:inline-flex;align-items:center;gap:.5rem}
+  .mark .word{font-family:"Instrument Serif",serif;font-size:1.5rem;letter-spacing:.02em;color:var(--ink)}
+
+  /* nav */
+  header.nav{position:sticky;top:0;z-index:50;background:rgba(246,248,252,.8);
+    backdrop-filter:blur(10px);border-bottom:1px solid transparent;transition:border-color .3s,background .3s}
+  header.nav.scrolled{border-bottom:1px solid var(--line);background:rgba(246,248,252,.92)}
+  .nav-inner{display:flex;align-items:center;justify-content:space-between;height:70px}
+  .nav-links{display:flex;gap:30px;align-items:center}
+  .nav-links a:not(.btn){font-size:.92rem;color:var(--muted);transition:color .2s}
+  .nav-links a:not(.btn):hover{color:var(--ink)}
+  .nav .btn{padding:.6rem 1.05rem}
+  @media(max-width:760px){.nav-links a:not(.btn){display:none}}
+
+  /* reveal */
+  .rise{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s ease}
+  .rise.in{opacity:1;transform:none}
+  .d1{transition-delay:.06s}.d2{transition-delay:.13s}.d3{transition-delay:.2s}.d4{transition-delay:.27s}
+
+  /* hero */
+  .hero{padding:clamp(40px,7vw,86px) 0 clamp(40px,6vw,72px)}
+  .hero-grid{display:grid;grid-template-columns:1.08fr .92fr;gap:46px;align-items:center}
+  .hero h1{font-family:"Instrument Serif",serif;font-weight:400;color:var(--ink);
+    font-size:clamp(2.6rem,5.4vw,4.7rem);line-height:1.01;letter-spacing:-.01em;margin:20px 0 0}
+  .hero h1 em{font-style:italic;color:var(--ember-deep)}
+  .hero .sub{margin-top:22px;max-width:36ch;color:var(--body);font-size:1.12rem}
+  .hero .cta-row{margin-top:30px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+
+  .panel{position:relative;aspect-ratio:1/.9;width:100%}
+  .panel svg.field{position:absolute;inset:0;width:100%;height:100%}
+  .arc-path{fill:none;stroke:url(#eg);stroke-width:2.4;stroke-linecap:round;
+    stroke-dasharray:1;stroke-dashoffset:1}
+  .arc-path.draw{animation:draw 1.7s cubic-bezier(.7,0,.2,1) .35s forwards}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  .tglow{fill:var(--glow);opacity:0;animation:gi .8s ease 1.7s forwards}
+  @keyframes gi{to{opacity:1}}
+  .card{position:absolute;top:9%;right:1%;width:206px;background:var(--surface);
+    border:1px solid var(--line-2);border-radius:15px;padding:15px 16px;
+    box-shadow:0 22px 50px -26px rgba(15,22,53,.4);opacity:0;transform:translateY(10px) scale(.96);
+    transition:opacity .6s ease,transform .6s ease;transition-delay:1.55s}
+  .card.in{opacity:1;transform:none}
+  .card .cl{font-family:"IBM Plex Mono",monospace;font-size:.6rem;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+  .card .cn{margin-top:9px;height:8px;width:70%;border-radius:4px;background:linear-gradient(90deg,var(--ink),rgba(15,22,53,.18))}
+  .card .ct{margin-top:8px;font-size:.9rem;color:var(--ink);font-weight:700}
+  .card .cr{margin-top:12px;display:flex;align-items:center;gap:7px;font-size:.76rem;color:var(--ember-deep);font-weight:600}
+  .card .tick{width:16px;height:16px;border-radius:50%;background:var(--ember);color:#fff;display:grid;place-items:center;font-size:.6rem;font-weight:800}
+
+  .dogfood{margin-top:14px;display:inline-flex;align-items:center;gap:10px;font-size:.83rem;color:var(--body);
+    border:1px solid var(--line);border-radius:999px;padding:.42rem .9rem;background:var(--surface)}
+  .dogfood b{color:var(--ink);font-weight:700}
+  .pulse{width:7px;height:7px;border-radius:50%;background:var(--ember);box-shadow:0 0 0 0 var(--glow);animation:pulse 2.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 var(--glow)}70%{box-shadow:0 0 0 9px rgba(236,125,30,0)}100%{box-shadow:0 0 0 0 rgba(236,125,30,0)}}
+
+  /* trust strip */
+  .strip{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--surface)}
+  .strip .wrap{display:flex;gap:30px;align-items:center;justify-content:space-between;padding:18px 26px;flex-wrap:wrap}
+  .strip .lab{font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+  .strip .items{display:flex;gap:26px;flex-wrap:wrap;color:var(--ink);font-weight:600;font-size:.95rem}
+  .strip .items span{display:inline-flex;align-items:center;gap:8px}
+  .strip .dot{width:6px;height:6px;border-radius:50%;background:var(--ember)}
+
+  section{padding:clamp(58px,8vw,104px) 0}
+  .sec-head{max-width:60ch}
+  .sec-head h2{font-family:"Instrument Serif",serif;font-weight:400;color:var(--ink);
+    font-size:clamp(2rem,4vw,3.2rem);line-height:1.05;letter-spacing:-.01em;margin-top:16px}
+  .sec-head h2 em{font-style:italic;color:var(--ember-deep)}
+  .lead{margin-top:18px;color:var(--body);font-size:1.1rem;max-width:56ch}
+
+  .map{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+    border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-top:46px}
+  .map .cell{background:var(--surface);padding:28px 24px}
+  .map .k{font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.12em;color:var(--ember-deep);text-transform:uppercase}
+  .map .v{margin-top:13px;color:var(--body);font-size:1rem}
+  @media(max-width:760px){.map{grid-template-columns:1fr}}
+
+  .steps{margin-top:48px;display:grid;grid-template-columns:repeat(2,1fr);gap:24px}
+  .step{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:26px}
+  .step .num{font-family:"IBM Plex Mono",monospace;font-size:.85rem;color:var(--ember-deep)}
+  .step h3{font-family:"Instrument Serif",serif;font-weight:400;color:var(--ink);font-size:1.75rem;margin-top:10px;line-height:1.1}
+  .step p{margin-top:10px;color:var(--body);font-size:.98rem}
+  @media(max-width:680px){.steps{grid-template-columns:1fr}}
+
+  /* ---- animated "how it works" walkthrough ---- */
+  .demo{--dur:4600ms;margin-top:46px;background:var(--surface);border:1px solid var(--line);
+    border-radius:20px;overflow:hidden;box-shadow:0 34px 80px -46px rgba(15,22,53,.4)}
+  .demo-rail{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}
+  .rstep{position:relative;background:none;border:0;border-right:1px solid var(--line);padding:15px 16px;
+    text-align:left;cursor:pointer;font-family:inherit;color:var(--muted);font-weight:600;font-size:.93rem;transition:color .2s,background .2s}
+  .rstep:last-child{border-right:0}
+  .rstep b{font-family:"IBM Plex Mono",monospace;font-size:.74rem;color:var(--line-2);margin-right:8px}
+  .rstep.on{color:var(--ink);background:var(--tint)}
+  .rstep.on b{color:var(--ember-deep)}
+  .rstep .bar{position:absolute;left:0;bottom:-1px;height:2px;width:0;background:var(--ember)}
+  .rstep .bar.run{width:100%;transition:width var(--dur) linear}
+  @media(max-width:640px){.rstep{font-size:.74rem;padding:11px 8px}.rstep b{display:block;margin:0 0 2px}}
+
+  .demo-stage{position:relative;height:340px;background:radial-gradient(130% 120% at 82% -10%, var(--tint), transparent 60%), var(--surface)}
+  .scene{position:absolute;inset:0;padding:28px;opacity:0;visibility:hidden;transition:opacity .45s ease;display:flex;align-items:center;justify-content:center}
+  .scene.active{opacity:1;visibility:visible}
+  @media(max-width:640px){.demo-stage{height:380px}.scene{padding:20px}}
+
+  .s-find .rows{width:min(440px,100%);display:flex;flex-direction:column;gap:11px;position:relative;z-index:2}
+  .s-find .row{display:flex;align-items:center;gap:12px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:13px 15px;position:relative;opacity:.85}
+  .s-find .row .nm{height:9px;width:120px;border-radius:5px;background:linear-gradient(90deg,var(--ink),rgba(15,22,53,.18))}
+  .s-find .row .tag{margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border:1px solid var(--line);border-radius:999px;padding:3px 9px}
+  .s-find .row .tag.hot{color:var(--ember-deep);border-color:var(--ember)}
+  .s-find .row .pin{position:absolute;right:-6px;top:-15px;transform:scale(.6);opacity:0;background:var(--ink);color:#fff;font-size:.66rem;font-weight:700;padding:4px 9px;border-radius:8px;white-space:nowrap}
+  .s-find .scan{position:absolute;left:0;right:0;top:0;height:64px;z-index:3;opacity:0;background:linear-gradient(180deg,transparent,rgba(236,125,30,.18),transparent)}
+  .s-find.active .scan{animation:scan 2.3s ease-in-out .2s}
+  @keyframes scan{0%{opacity:0;transform:translateY(-10px)}12%{opacity:1}88%{opacity:1}100%{opacity:0;transform:translateY(250px)}}
+  .s-find.active .row.match{animation:matchrow .5s ease 1.5s forwards}
+  @keyframes matchrow{to{border-color:var(--ember);background:var(--surface);box-shadow:0 10px 26px -14px var(--glow)}}
+  .s-find.active .row:not(.match){animation:dim .4s ease 1.7s forwards}
+  @keyframes dim{to{opacity:.4}}
+  .s-find.active .row.match .pin{animation:pinin .4s cubic-bezier(.2,1.3,.5,1) 1.9s forwards}
+  @keyframes pinin{to{opacity:1;transform:scale(1)}}
+
+  .s-reach .mailcard{width:min(420px,100%);background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:0 16px 44px -24px rgba(15,22,53,.4);position:relative;z-index:2}
+  .s-reach .mhead{border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:12px;font-size:.85rem;color:var(--ink);font-weight:600}
+  .s-reach .mline{height:9px;border-radius:5px;background:var(--line);margin:9px 0;width:0}
+  .s-reach .l1{--w:96%}.s-reach .l2{--w:80%}.s-reach .l3{--w:58%}
+  .s-reach.active .l1{animation:type .55s ease .3s forwards}
+  .s-reach.active .l2{animation:type .55s ease .85s forwards}
+  .s-reach.active .l3{animation:type .55s ease 1.4s forwards}
+  @keyframes type{to{width:var(--w)}}
+  .s-reach .send{margin-top:15px;display:inline-flex;align-items:center;gap:8px;background:var(--ember);color:#fff;font-weight:700;font-size:.82rem;padding:8px 14px;border-radius:9px;opacity:.45}
+  .s-reach.active .send{animation:sendpop .4s ease 1.95s forwards}
+  @keyframes sendpop{to{opacity:1;transform:translateY(-1px)}}
+  .s-reach .plane{position:absolute;left:50%;bottom:70px;width:24px;height:24px;opacity:0;z-index:3}
+  .s-reach.active .plane{animation:fly 1.1s cubic-bezier(.5,0,.4,1) 2.35s forwards}
+  @keyframes fly{0%{opacity:0;transform:translate(0,0) rotate(0)}15%{opacity:1}100%{opacity:0;transform:translate(150px,-150px) rotate(18deg)}}
+  .s-reach .deliver{position:absolute;top:28px;right:32px;background:var(--surface);border:1px solid var(--ember);color:var(--ember-deep);font-weight:600;font-size:.8rem;padding:7px 12px;border-radius:999px;opacity:0;z-index:4}
+  .s-reach.active .deliver{animation:fadein .5s ease 3s forwards}
+
+  .s-follow .tl{display:flex;flex-direction:column;gap:18px}
+  .s-follow .ti{display:flex;align-items:center;gap:13px;color:var(--ink);font-weight:600;font-size:1rem;opacity:0;transform:translateX(-12px)}
+  .s-follow .ti small{color:var(--muted);font-weight:500}
+  .s-follow .ti .dot{width:13px;height:13px;border-radius:50%;background:var(--ember);flex:0 0 auto;box-shadow:0 0 0 4px var(--ember-soft)}
+  .s-follow.active .ti:nth-child(1){animation:slidein .5s ease .3s forwards}
+  .s-follow.active .ti:nth-child(2){animation:slidein .5s ease .95s forwards}
+  .s-follow.active .ti:nth-child(3){animation:slidein .5s ease 1.6s forwards}
+  @keyframes slidein{to{opacity:1;transform:none}}
+
+  .s-handoff{flex-direction:column;gap:16px}
+  .s-handoff .reply{background:var(--ink);color:#fff;padding:14px 18px;border-radius:15px;border-bottom-left-radius:5px;font-size:1.05rem;max-width:340px;text-align:center;opacity:0;transform:scale(.9)}
+  .s-handoff.active .reply{animation:pop .55s cubic-bezier(.2,1.3,.5,1) .3s forwards}
+  @keyframes pop{to{opacity:1;transform:none}}
+  .s-handoff .down{font-size:1.5rem;color:var(--line-2);opacity:0;line-height:1}
+  .s-handoff.active .down{animation:fadein .4s ease .95s forwards}
+  .s-handoff .you{display:flex;flex-direction:column;align-items:center;gap:5px;opacity:0}
+  .s-handoff .you .av{width:54px;height:54px;border-radius:50%;background:var(--ember);color:#fff;display:grid;place-items:center;font-weight:700;box-shadow:0 0 0 5px var(--ember-soft)}
+  .s-handoff .you small{color:var(--muted);font-weight:600;font-size:.82rem}
+  .s-handoff.active .you{animation:fadein .5s ease 1.2s forwards}
+  @keyframes fadein{to{opacity:1}}
+
+  .demo-foot{display:flex;align-items:center;gap:18px;justify-content:space-between;border-top:1px solid var(--line);padding:18px 22px;background:var(--surface)}
+  .demo-foot .cap{color:var(--body);font-size:.98rem;max-width:62ch}
+  .cbtn{flex:0 0 auto;background:var(--paper);border:1px solid var(--line-2);color:var(--ink);font-family:inherit;font-weight:600;font-size:.85rem;padding:7px 14px;border-radius:8px;cursor:pointer}
+  .cbtn:hover{border-color:var(--ember);color:var(--ember-deep)}
+  @media(max-width:640px){.demo-foot{flex-direction:column;align-items:flex-start;gap:12px}}
+
+  @media(prefers-reduced-motion:reduce){
+    .s-find .row:not(.match){opacity:.5!important}
+    .s-find .row.match{border-color:var(--ember);background:var(--surface)}
+    .s-find .row.match .pin{opacity:1;transform:none}
+    .s-find .scan{display:none}
+    .s-reach .mline{width:var(--w)!important;animation:none!important}
+    .s-reach .send{opacity:1!important;animation:none!important}
+    .s-reach .plane{display:none}
+    .s-reach .deliver{opacity:1!important;animation:none!important}
+    .s-follow .ti{opacity:1!important;transform:none!important;animation:none!important}
+    .s-handoff .reply,.s-handoff .you,.s-handoff .down{opacity:1!important;transform:none!important;animation:none!important}
+    .rstep .bar.run{transition:none}
+    .demo-foot .cbtn{display:none}
+  }
+
+  .proof{background:var(--tint)}
+  .proof .q{font-family:"Instrument Serif",serif;color:var(--ink);
+    font-size:clamp(1.7rem,3.4vw,2.7rem);line-height:1.2;max-width:24ch}
+  .proof .q em{font-style:italic;color:var(--ember-deep)}
+  .credrow{margin-top:34px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+  .face{width:62px;height:62px;border-radius:50%;flex:0 0 auto;
+    background:linear-gradient(150deg,var(--ink),#39406b);color:#fff;display:grid;place-items:center;
+    font-family:"Instrument Serif",serif;font-size:1.5rem;border:1px solid var(--line-2)}
+  /* Swap the .face div for a real photo:  <img class="face" src="anant.jpg" alt="Anant, founder of Doot"> */
+  .credrow .ct{max-width:52ch}
+  .credrow .ct b{color:var(--ink)}
+  .credrow .ct p{color:var(--body);font-size:.98rem}
+
+  /* faq */
+  .faq{margin-top:42px;border-top:1px solid var(--line)}
+  details{border-bottom:1px solid var(--line)}
+  summary{list-style:none;cursor:pointer;padding:20px 2px;display:flex;justify-content:space-between;gap:18px;
+    align-items:center;color:var(--ink);font-weight:600;font-size:1.08rem}
+  summary::-webkit-details-marker{display:none}
+  summary .pm{flex:0 0 auto;width:22px;height:22px;position:relative}
+  summary .pm::before,summary .pm::after{content:"";position:absolute;background:var(--ember);transition:transform .25s}
+  summary .pm::before{top:10px;left:3px;width:16px;height:2px}
+  summary .pm::after{top:3px;left:10px;width:2px;height:16px}
+  details[open] summary .pm::after{transform:scaleY(0)}
+  details .a{padding:0 2px 22px;color:var(--body);max-width:64ch}
+
+  .beyond .lead{max-width:58ch}
+
+  .final{text-align:center;background:var(--ink)}
+  .final h2{font-family:"Instrument Serif",serif;font-weight:400;color:#fff;
+    font-size:clamp(2.5rem,5.5vw,4.6rem);line-height:1.02}
+  .final h2 em{font-style:italic;color:var(--ember)}
+  .final p{margin:18px auto 0;color:#B9BFDD;max-width:46ch;font-size:1.1rem}
+  .final .btn{margin-top:30px;padding:.9rem 1.6rem;font-size:1.02rem}
+  .final .risk{color:#8E96C0}
+
+  footer{border-top:1px solid var(--line);padding:42px 0 54px;background:var(--paper)}
+  .foot-inner{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;align-items:flex-end}
+  .foot-inner .tag{color:var(--muted);font-size:.9rem;margin-top:10px;max-width:30ch}
+  .foot-right{text-align:right;color:var(--muted);font-size:.86rem;line-height:1.9}
+  .foot-right a{color:var(--body);border-bottom:1px solid var(--line-2)}
+  .foot-right a:hover{color:var(--ember-deep);border-color:var(--ember)}
+  @media(max-width:600px){.foot-right{text-align:left}}
+
+  @media(max-width:880px){
+    .hero-grid{grid-template-columns:1fr;gap:14px}
+    .panel{max-width:430px;margin:6px auto 0}
+    .hero .sub{max-width:48ch}
+  }
+  @media(prefers-reduced-motion:reduce){
+    .rise{opacity:1;transform:none;transition:none}
+    .arc-path{stroke-dashoffset:0;animation:none}
+    .card{opacity:1;transform:none;transition:none}
+    .tglow{opacity:1;animation:none}.pulse{animation:none}html{scroll-behavior:auto}
+  }
+</style>
+</head>
+<body>
+
+<header class="nav" id="nav">
+  <div class="wrap nav-inner">
+    <a class="mark" href="#top" aria-label="Doot home" data-track="nav_click" data-loc="logo">
+      <svg width="26" height="20" viewBox="0 0 26 20" fill="none" aria-hidden="true">
+        <path d="M2 17 C 7 16, 9 4, 24 4" stroke="var(--ember)" stroke-width="2" stroke-linecap="round" fill="none"/>
+        <circle cx="24" cy="4" r="2.6" fill="var(--ember)"/>
+      </svg>
+      <span class="word">Doot</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#name" data-track="nav_click" data-loc="why">Why Doot</a>
+      <a href="#how" data-track="nav_click" data-loc="how">How it works</a>
+      <a href="#faq" data-track="nav_click" data-loc="faq">FAQ</a>
+      <a class="btn btn-primary" href="mailto:asatianant2678@gmail.com?subject=A%20look%20at%20Doot&body=Hi%20Anant%2C%0D%0A%0D%0AI%20saw%20the%20Doot%20page%20and%20would%20like%20a%2010-minute%20look%20at%20what%20it%20could%20do%20for%20our%20outbound.%0D%0A%0D%0AWhat%20times%20work%20for%20you%20this%20week%3F%0D%0A%0D%0AQuick%20context%20(company%20%2F%20what%20we%20sell%20%2F%20how%20we%20do%20outbound%20today)%3A%0D%0A" data-track="cta_click" data-loc="nav">Book a 10-min look</a>
+    </nav>
+  </div>
+</header>
+
+<a id="top"></a>
+<section class="hero" id="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow rise in">Autonomous sales agent</span>
+      <h1 class="rise d1">The email that <em>found you</em> was written and sent by Doot.</h1>
+      <p class="sub rise d2">On its own — no template, no copy-paste. Doot finds the companies that fit you, reaches the person who can actually say yes, writes a real message, and follows up. Your pipeline fills without adding headcount.</p>
+      <div class="cta-row rise d3">
+        <a class="btn btn-primary" href="mailto:asatianant2678@gmail.com?subject=A%20look%20at%20Doot&body=Hi%20Anant%2C%0D%0A%0D%0AI%20saw%20the%20Doot%20page%20and%20would%20like%20a%2010-minute%20look%20at%20what%20it%20could%20do%20for%20our%20outbound.%0D%0A%0D%0AWhat%20times%20work%20for%20you%20this%20week%3F%0D%0A%0D%0AQuick%20context%20(company%20%2F%20what%20we%20sell%20%2F%20how%20we%20do%20outbound%20today)%3A%0D%0A" data-track="cta_click" data-loc="hero">Book a 10-min look</a>
+        <a class="btn btn-ghost" href="#how" data-track="cta_click" data-loc="hero_secondary">See how it works</a>
+      </div>
+      <p class="risk rise d3">10 minutes. No deck, no obligation — and proof is already in your inbox.</p>
+      <div class="dogfood rise d4"><span class="pulse"></span><span>You're reading this because <b>Doot did its job.</b></span></div>
+    </div>
+    <div class="rise d2">
+      <div class="panel">
+        <svg class="field" viewBox="0 0 520 460" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <defs><linearGradient id="eg" x1="0" y1="1" x2="1" y2="0">
+            <stop offset="0" stop-color="var(--muted)" stop-opacity="0.4"/>
+            <stop offset="0.55" stop-color="var(--ember)"/>
+            <stop offset="1" stop-color="#FFB46B"/>
+          </linearGradient></defs>
+          <line x1="38" y1="410" x2="300" y2="410" stroke="var(--line-2)" stroke-width="1"/>
+          <circle cx="54" cy="410" r="4.5" fill="var(--muted)"/>
+          <text x="54" y="436" fill="var(--muted)" font-family="IBM Plex Mono" font-size="11" letter-spacing="1">YOU</text>
+          <circle class="tglow" cx="414" cy="116" r="46"/>
+          <path class="arc-path" id="arc" pathLength="1" d="M54 408 C 150 354, 150 146, 414 116"/>
+          <circle cx="414" cy="116" r="5" fill="var(--ember)"/>
+        </svg>
+        <div class="card" id="tcard">
+          <div class="cl">Decision-maker · matched</div>
+          <div class="cn"></div>
+          <div class="ct">Head of Sales</div>
+          <div class="cr"><span class="tick">✓</span> Reached &amp; followed up</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- trust strip: replace with real client logos / a quantified result once you have them -->
+<div class="strip">
+  <div class="wrap">
+    <span class="lab">Built on</span>
+    <div class="items">
+      <span><span class="dot"></span>Production agentic AI</span>
+      <span><span class="dot"></span>IIT Bombay engineering</span>
+      <span><span class="dot"></span>Your inbox &amp; CRM — no switching</span>
+      <span><span class="dot"></span>You approve every message</span>
+    </div>
+  </div>
+</div>
+
+<section id="name">
+  <div class="wrap">
+    <div class="sec-head rise">
+      <span class="eyebrow">Why "Doot"</span>
+      <h2>A <em>dūta</em> was the one you trusted to cross any distance — and come back with a yes.</h2>
+      <p class="lead">In the old epics, when a message had to reach exactly the right person, you sent a dūta — an envoy. Hanuman, as Ramdoot, crossed an ocean, found the one person who mattered, delivered the message word-perfect, and returned with the answer. That is the whole job of outbound. Doot does it for your pipeline, at the speed of software.</p>
+    </div>
+    <div class="map rise">
+      <div class="cell"><div class="k">Finds the one who matters</div><div class="v">Out of thousands of companies, Doot surfaces the ones that fit you — and the person inside who can actually say yes.</div></div>
+      <div class="cell"><div class="k">Carries the message</div><div class="v">Every email is researched and written for that one person. A real message, never a mail-merge.</div></div>
+      <div class="cell"><div class="k">Never returns empty</div><div class="v">Silence isn't a no. Doot follows up on its own cadence until there's a reply, or a reason to stop.</div></div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="sec-head rise">
+      <span class="eyebrow">How Doot works</span>
+      <h2>Watch a lead go from <em>stranger</em> to warm reply.</h2>
+      <p class="lead">Four things your best rep does on their best day — Doot does them every day, on autopilot. Here's the whole journey, start to finish.</p>
+    </div>
+    <div class="demo rise" id="demo">
+      <div class="demo-rail">
+        <button class="rstep" data-i="0"><b>01</b>Find<span class="bar"></span></button>
+        <button class="rstep" data-i="1"><b>02</b>Reach<span class="bar"></span></button>
+        <button class="rstep" data-i="2"><b>03</b>Follow up<span class="bar"></span></button>
+        <button class="rstep" data-i="3"><b>04</b>Hand off<span class="bar"></span></button>
+      </div>
+
+      <div class="demo-stage">
+        <div class="scene s-find" data-i="0">
+          <div class="scan"></div>
+          <div class="rows">
+            <div class="row"><span class="nm"></span><span class="tag">SaaS</span></div>
+            <div class="row match"><span class="nm"></span><span class="tag hot">hiring SDRs</span><span class="pin">↳ Head of Sales</span></div>
+            <div class="row"><span class="nm"></span><span class="tag">agency</span></div>
+            <div class="row"><span class="nm"></span><span class="tag">retail</span></div>
+          </div>
+        </div>
+
+        <div class="scene s-reach" data-i="1">
+          <div class="mailcard">
+            <div class="mhead">To: Priya — Head of Sales</div>
+            <div class="mline l1"></div><div class="mline l2"></div><div class="mline l3"></div>
+            <span class="send">Send <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11L21 3l-8 18-2-7-8-3z" fill="currentColor"/></svg></span>
+          </div>
+          <svg class="plane" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11L21 3l-8 18-2-7-8-3z" fill="var(--ember)"/></svg>
+          <span class="deliver">Delivered ✓</span>
+        </div>
+
+        <div class="scene s-follow" data-i="2">
+          <div class="tl">
+            <div class="ti"><span class="dot"></span> Day 0 <small>&nbsp;— first email sent</small></div>
+            <div class="ti"><span class="dot"></span> Day 3 <small>&nbsp;— no reply? follow up, new angle</small></div>
+            <div class="ti"><span class="dot"></span> Day 7 <small>&nbsp;— one last gentle nudge</small></div>
+          </div>
+        </div>
+
+        <div class="scene s-handoff" data-i="3">
+          <div class="reply">"Interesting — can we talk this week?"</div>
+          <div class="down">↓</div>
+          <div class="you"><span class="av">You</span><small>step in &amp; close</small></div>
+        </div>
+      </div>
+
+      <div class="demo-foot">
+        <p class="cap" id="cap"></p>
+        <button class="cbtn" id="pp">Pause</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="proof" id="proof">
+  <div class="wrap">
+    <span class="eyebrow rise">Why it works</span>
+    <p class="q serif rise" style="margin-top:16px">You're reading this because Doot <em>already worked.</em> It found you, and earned thirty seconds of your attention. That is the entire pitch.</p>
+    <div class="credrow rise">
+      <div class="face" aria-hidden="true">अ</div>
+      <div class="ct"><p><b>Built by an engineer from IIT Bombay</b> who's shipped production-grade agentic systems — multi-agent orchestration, real-time voice agents, and compliance-aware copilots. Doot is that craft, pointed at your pipeline.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <div class="sec-head rise">
+      <span class="eyebrow">Straight answers</span>
+      <h2>The questions you're already asking.</h2>
+    </div>
+    <div class="faq rise">
+      <details><summary>Isn't this just spammy mass email? <span class="pm"></span></summary><div class="a">No. Doot researches each contact and writes for that specific person, then sends at human volume from a properly set-up domain with a clear opt-out. The whole point is to protect your sender reputation, not burn it.</div></details>
+      <details><summary>Do I have to switch tools? <span class="pm"></span></summary><div class="a">No. Doot works with the inbox and CRM you already use. And you approve every message before it goes out — until you trust it enough to let it run on its own.</div></details>
+      <details><summary>How fast can it start? <span class="pm"></span></summary><div class="a">A first batch can be live in days, not months. No job posting, no three-month ramp, no onboarding a new hire.</div></details>
+      <details><summary>What does it cost? <span class="pm"></span></summary><div class="a">We scope it to your pipeline on the call — most teams start with a small setup and a monthly run, far below the cost of a single SDR hire. You'll get a clear number, not a runaround.</div></details>
+      <details><summary>Who's behind Doot? <span class="pm"></span></summary><div class="a">An engineer from IIT Bombay who builds agentic AI systems for a living. You'll talk to the person who builds your agent — not an account manager.</div></details>
+    </div>
+  </div>
+</section>
+
+<section class="beyond" id="beyond">
+  <div class="wrap sec-head rise">
+    <span class="eyebrow">Beyond sales</span>
+    <h2>Sales is where we start — not where we stop.</h2>
+    <p class="lead">Doot is a sales agent today because outbound is the sharpest place to prove an agent earns its keep. The same engine builds agents for any work that looks repetitive on the surface and is full of judgment underneath — support, research, operations. If a capable person loses hours to it every week, Doot can carry it.</p>
+  </div>
+</section>
+
+<section class="final" id="book">
+  <div class="wrap">
+    <h2 class="rise">Send a <em>Doot.</em></h2>
+    <p class="rise d1">Ten minutes. We'll show you exactly what it would do for your pipeline — and you already have proof in your inbox.</p>
+    <a class="btn btn-primary rise d2" href="mailto:asatianant2678@gmail.com?subject=A%20look%20at%20Doot&body=Hi%20Anant%2C%0D%0A%0D%0AI%20saw%20the%20Doot%20page%20and%20would%20like%20a%2010-minute%20look%20at%20what%20it%20could%20do%20for%20our%20outbound.%0D%0A%0D%0AWhat%20times%20work%20for%20you%20this%20week%3F%0D%0A%0D%0AQuick%20context%20(company%20%2F%20what%20we%20sell%20%2F%20how%20we%20do%20outbound%20today)%3A%0D%0A" data-track="cta_click" data-loc="final">Book a 10-min look</a>
+    <p class="risk rise d2">No deck. No obligation. Just a look.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-inner">
+    <div>
+      <a class="mark" href="#top" aria-label="Doot" data-track="nav_click" data-loc="footer_logo">
+        <svg width="26" height="20" viewBox="0 0 26 20" fill="none" aria-hidden="true">
+          <path d="M2 17 C 7 16, 9 4, 24 4" stroke="var(--ember)" stroke-width="2" stroke-linecap="round" fill="none"/>
+          <circle cx="24" cy="4" r="2.6" fill="var(--ember)"/>
+        </svg>
+        <span class="word">Doot</span>
+      </a>
+      <p class="tag">The messenger for modern sales.</p>
+    </div>
+    <div class="foot-right">
+      <a href="mailto:asatianant2678@gmail.com?subject=A%20look%20at%20Doot&body=Hi%20Anant%2C%0D%0A%0D%0AI%20saw%20the%20Doot%20page%20and%20would%20like%20a%2010-minute%20look%20at%20what%20it%20could%20do%20for%20our%20outbound.%0D%0A%0D%0AWhat%20times%20work%20for%20you%20this%20week%3F%0D%0A%0D%0AQuick%20context%20(company%20%2F%20what%20we%20sell%20%2F%20how%20we%20do%20outbound%20today)%3A%0D%0A" data-track="contact_click" data-loc="footer">asatianant2678@gmail.com</a><br>
+      © 2026 Doot
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ---------------- Doot analytics: tracks every meaningful interaction ---------------- */
+(function(){
+  function track(event, props){
+    props = props || {};
+    try{
+      var payload = Object.assign({event:event, ts:Date.now(), path:location.pathname}, props);
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push(payload);                                   // GA4 / GTM
+      if(typeof window.gtag === 'function') window.gtag('event', event, props);
+      if(window.posthog && window.posthog.capture) window.posthog.capture(event, props);
+      if(typeof window.clarity === 'function') window.clarity('event', event);  // Clarity custom tag
+      if(!window.gtag && !window.posthog && typeof window.clarity!=='function')
+        console.debug('[doot:track]', event, props);                   // visible before you wire a provider
+    }catch(e){ console.warn('track failed', e); }
+  }
+  window.dootTrack = track;
+
+  // capture campaign source once (utm_* + referrer)
+  var qs = new URLSearchParams(location.search), utm = {};
+  ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'].forEach(function(k){ if(qs.get(k)) utm[k]=qs.get(k); });
+
+  window.addEventListener('load', function(){
+    track('page_view', Object.assign({referrer: document.referrer || 'direct'}, utm));
+  });
+
+  // EVERY tagged click (CTAs, nav, contact)
+  document.addEventListener('click', function(e){
+    var el = e.target.closest('[data-track]');
+    if(!el) return;
+    track(el.getAttribute('data-track'), {
+      location: el.getAttribute('data-loc') || '',
+      label: (el.textContent || '').trim().slice(0,60)
+    });
+  });
+
+  // scroll depth (25/50/75/100)
+  var marks=[25,50,75,100], hit={};
+  window.addEventListener('scroll', function(){
+    var sc=(window.scrollY+window.innerHeight)/document.body.scrollHeight*100;
+    marks.forEach(function(m){ if(sc>=m && !hit[m]){ hit[m]=1; track('scroll_depth',{percent:m}); } });
+  }, {passive:true});
+
+  // which sections actually get seen
+  var so=new IntersectionObserver(function(es){
+    es.forEach(function(en){ if(en.isIntersecting){ track('section_view',{section:en.target.id}); so.unobserve(en.target); } });
+  },{threshold:.4});
+  document.querySelectorAll('section[id]').forEach(function(s){ so.observe(s); });
+
+  // FAQ opens = buying-intent signal
+  document.querySelectorAll('#faq details').forEach(function(d){
+    d.addEventListener('toggle', function(){ if(d.open) track('faq_open',{q:(d.querySelector('summary').textContent||'').trim().slice(0,50)}); });
+  });
+
+  // time on page
+  var start=Date.now();
+  window.addEventListener('pagehide', function(){ track('time_on_page',{seconds:Math.round((Date.now()-start)/1000)}); });
+
+  // CONVERSION: fires when someone books in an embedded Calendly
+  window.addEventListener('message', function(e){
+    if(e.data && e.data.event === 'calendly.event_scheduled') track('slot_booked',{source:'calendly'});
+  });
+})();
+
+/* ---------------- motion: nav border, reveals, hero arc ---------------- */
+(function(){
+  var nav=document.getElementById('nav');
+  var onScroll=function(){ nav.classList.toggle('scrolled', window.scrollY>12); };
+  onScroll(); window.addEventListener('scroll', onScroll, {passive:true});
+
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+  },{threshold:.16});
+  document.querySelectorAll('.rise:not(.in)').forEach(function(el){ io.observe(el); });
+
+  window.addEventListener('load', function(){
+    var reduce=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+    var arc=document.getElementById('arc'), card=document.getElementById('tcard');
+    if(reduce){ card.classList.add('in'); return; }
+    requestAnimationFrame(function(){ arc.classList.add('draw'); });
+    setTimeout(function(){ card.classList.add('in'); }, 1550);
+  });
+})();
+</script>
+<script>
+/* ---------------- animated how-it-works walkthrough ---------------- */
+(function(){
+  var demo=document.getElementById('demo'); if(!demo) return;
+  var scenes=[].slice.call(demo.querySelectorAll('.scene'));
+  var rs=[].slice.call(demo.querySelectorAll('.rstep'));
+  var cap=document.getElementById('cap'), pp=document.getElementById('pp');
+  var caps=[
+    "Doot scans your market, ignores the noise, and locks onto the company that fits \u2014 and the person who can actually say yes.",
+    "It writes a real, personal email for that one person and sends it from your inbox \u2014 not a mail-merge.",
+    "No reply isn't a no. Doot follows up on its own schedule, with a fresh angle each time.",
+    "When they bite, Doot hands you a warm conversation. You step in and close."
+  ];
+  var dur=4600, cur=-1, timer=null, playing=false;
+  var reduce=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  function runBar(i){
+    rs.forEach(function(r,k){
+      var b=r.querySelector('.bar'); b.classList.remove('run');
+      if(k===i && !reduce){ void b.offsetWidth; b.classList.add('run'); }
+    });
+  }
+  function show(i){
+    cur=i;
+    scenes.forEach(function(s,k){ s.classList.toggle('active',k===i); });
+    rs.forEach(function(r,k){ r.classList.toggle('on',k===i); });
+    cap.textContent=caps[i];
+    if(playing) runBar(i);
+  }
+  function next(){ show((cur+1)%scenes.length); }
+  function play(){ if(reduce) return; playing=true; pp.textContent='Pause'; if(cur<0) cur=0; show(cur); runBar(cur); clearInterval(timer); timer=setInterval(next,dur); }
+  function pause(){ playing=false; pp.textContent='Play'; clearInterval(timer); }
+
+  rs.forEach(function(r){ r.addEventListener('click',function(){ pause(); show(+r.getAttribute('data-i')); window.dootTrack&&window.dootTrack('demo_step',{step:+r.getAttribute('data-i')}); }); });
+  pp.addEventListener('click',function(){ playing ? pause() : play(); });
+
+  show(0);
+
+  var seen=false;
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(e.isIntersecting){ if(!reduce) play(); if(!seen){ seen=true; window.dootTrack&&window.dootTrack('demo_view'); } }
+      else pause();
+    });
+  },{threshold:.35});
+  io.observe(demo);
+})();
+</script>
+</body>
+</html>
