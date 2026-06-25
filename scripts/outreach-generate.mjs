@@ -27,7 +27,7 @@ function parseCSV(t) {
 }
 
 const firstName = (f) => ((f || "there").trim().split(/\s+/)[0]) || "there";
-const SITE = process.env.DOOT_SITE || "2147doot.pages.dev";
+const SITE = process.env.DOOT_SITE || "https://2147doot.pages.dev";
 const SIG = "Anant — AI engineer, IIT Bombay";
 const PS = 'P.S. Not relevant? Just reply "no" and I\'ll stop.';
 
