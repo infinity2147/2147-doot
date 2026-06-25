@@ -97,14 +97,7 @@ async function render(){
         <td>${v.events}</td><td>${badge(v.intent.bucket)} ${v.intent.score}</td><td>${fmt(v.last_ts)}</td></tr>`).join("")||"<tr><td colspan=5>No visitors yet</td></tr>"}
     </table>`;
   } else if (tab === "outreach"){
-    const d = await get(`/admin/api/outreach`);
-    const items = d.items || [];
-    const n = (s) => items.filter(x => x.status === s).length;
-    view.innerHTML = `<div class="orbar">
-      <b>${items.length}</b> drafts · <span style="color:#1a7f37">${n("approved")} approved</span> · ${n("skipped")} skipped · <b>${n("sent")}</b> sent · ${n("failed")} failed · ${n("draft")} to review
-      <span class="sub" style="margin-left:auto">Edit any text, hit Approve on the ones to send, then run <code>npm run outreach:send</code> (test first).</span>
-    </div>
-    ${items.map(orCard).join("") || "<p>No drafts yet. Run <code>node scripts/outreach-generate.mjs</code>.</p>"}`;
+    await outreachLoad();
   } else {
     const d = await get(`/admin/api/events?range=${range()}`);
     view.innerHTML = `<table><tr><th>When</th><th>Event</th><th>Visitor</th><th>Props</th></tr>
@@ -128,28 +121,77 @@ async function openVisitor(vid){
 function closeDrawer(){ $("#drawer").classList.remove("open"); }
 async function setStatus(id, status){ await fetch(`/admin/api/lead/${id}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body: JSON.stringify({status}) }); }
 
-function orCard(x){
+/* ---- Outreach review queue (one-at-a-time, auto-advance) ---- */
+let orItems = [], orIdx = 0, orAll = false;
+async function outreachLoad(){
+  orItems = (await get(`/admin/api/outreach`)).items || [];
+  const firstDraft = orItems.findIndex(x => x.status === "draft");
+  orIdx = firstDraft >= 0 ? firstDraft : 0;
+  orAll = false;
+  outreachRender();
+}
+const orCount = (s) => orItems.filter(x => x.status === s).length;
+function orHeader(){
+  return `<div class="orbar">
+    <b>${orItems.length ? orIdx + 1 : 0}</b> / ${orItems.length} ·
+    <span style="color:#1a7f37">${orCount("approved")} approved</span> · ${orCount("skipped")} skipped · ${orCount("draft")} left · <b>${orCount("sent")} sent</b>
+    <span style="margin-left:auto" class="sub">${orAll ? "" : "keys: <b>a</b> approve · <b>s</b> skip · <b>←/→</b> move &nbsp;·&nbsp; "}<a href="#" onclick="orToggleAll(event)">${orAll ? "focus mode" : "view all"}</a></span>
+  </div>`;
+}
+function orCardFull(x, focus){
   const dis = x.status === "sent" ? "disabled" : "";
-  return `<div class="ocard ${esc(x.status)}" id="oc-${x.id}">
+  return `<div class="ocard ${esc(x.status)}">
     <div class="ohead">
       <div><b>${esc(x.name)||"—"}</b> · ${esc(x.company)||""} <span class="sub">${esc(x.title||"")}</span></div>
       <div class="sub">${esc(x.email)} · <span class="pchip">${esc(x.persona)}</span> · <span class="ostatus">${esc(x.status)}</span></div>
     </div>
     <input id="subj-${x.id}" value="${esc(x.subject)}" ${dis}>
-    <textarea id="body-${x.id}" rows="9" ${dis}>${esc(x.body)}</textarea>
+    <textarea id="body-${x.id}" rows="${focus ? 14 : 9}" ${dis}>${esc(x.body)}</textarea>
     <div class="obtns">
-      <button class="ok" onclick="approveOutreach(${x.id})" ${dis}>✓ Approve</button>
-      <button onclick="skipOutreach(${x.id})" ${dis}>Skip</button>
-      <button onclick="draftOutreach(${x.id})" ${dis}>↺ Draft</button>
-      ${x.sent_ts ? `<span class="sub">sent ${fmt(x.sent_ts)}</span>` : ""}
+      ${focus ? `<button onclick="orNav(-1)">← prev</button>` : ""}
+      <button class="ok" onclick="orApprove(${x.id})" ${dis}>✓ Approve${focus ? " &amp; next" : ""}</button>
+      <button onclick="orSkip(${x.id})" ${dis}>Skip${focus ? " &amp; next" : ""}</button>
+      <button onclick="orSave(${x.id})" ${dis}>Save edit</button>
+      <button onclick="orDraft(${x.id})">↺ draft</button>
+      ${focus ? `<button onclick="orNav(1)">next →</button>` : ""}
       ${x.error ? `<span class="sub" style="color:#d1242f">error: ${esc(x.error)}</span>` : ""}
     </div>
   </div>`;
 }
-async function patchOutreach(id, body){ await fetch(`/admin/api/outreach/${id}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) }); }
-async function approveOutreach(id){ await patchOutreach(id, { status:"approved", subject:$(`#subj-${id}`).value, body:$(`#body-${id}`).value }); render(); }
-async function skipOutreach(id){ await patchOutreach(id, { status:"skipped" }); render(); }
-async function draftOutreach(id){ await patchOutreach(id, { status:"draft" }); render(); }
+function outreachRender(){
+  const v = $("#view");
+  if (!orItems.length){ v.innerHTML = orHeader() + "<p>No drafts. Run <code>node scripts/outreach-generate.mjs</code>.</p>"; return; }
+  if (orAll){ v.innerHTML = orHeader() + orItems.map(x => orCardFull(x, false)).join(""); return; }
+  let html = orHeader();
+  if (orCount("draft") === 0) html += `<div class="orbar" style="background:#eafaef;border-color:#2ea043">✅ All reviewed — <b>${orCount("approved")} approved</b>. Send: <code>npm run outreach:send</code> (test) → <code>npm run outreach:send:live</code>.</div>`;
+  v.innerHTML = html + orCardFull(orItems[orIdx], true);
+}
+async function orPatch(id, body){ await fetch(`/admin/api/outreach/${id}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) }); }
+function orEdits(id){ const s = $(`#subj-${id}`), b = $(`#body-${id}`); const o = {}; if (s) o.subject = s.value; if (b) o.body = b.value; return o; }
+function orApply(id, fields){ const it = orItems.find(x => x.id === id); if (it) Object.assign(it, fields); }
+async function orApprove(id){ const e = orEdits(id); await orPatch(id, { status:"approved", ...e }); orApply(id, { status:"approved", ...e }); orAdvance(); }
+async function orSkip(id){ await orPatch(id, { status:"skipped" }); orApply(id, { status:"skipped" }); orAdvance(); }
+async function orDraft(id){ await orPatch(id, { status:"draft" }); orApply(id, { status:"draft" }); outreachRender(); }
+async function orSave(id){ const e = orEdits(id); await orPatch(id, e); orApply(id, e); outreachRender(); }
+function orAdvance(){
+  if (orAll){ outreachRender(); return; }
+  let next = -1;
+  for (let k = orIdx + 1; k < orItems.length; k++) if (orItems[k].status === "draft"){ next = k; break; }
+  if (next < 0) for (let k = 0; k < orItems.length; k++) if (orItems[k].status === "draft"){ next = k; break; }
+  if (next >= 0) orIdx = next;
+  outreachRender();
+}
+function orNav(d){ orIdx = Math.max(0, Math.min(orItems.length - 1, orIdx + d)); outreachRender(); }
+function orToggleAll(e){ if (e) e.preventDefault(); orAll = !orAll; outreachRender(); }
+document.addEventListener("keydown", (e) => {
+  if (tab !== "outreach" || orAll || !orItems.length) return;
+  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+  const cur = orItems[orIdx]; if (!cur) return;
+  if (e.key === "a") orApprove(cur.id);
+  else if (e.key === "s") orSkip(cur.id);
+  else if (e.key === "ArrowRight") orNav(1);
+  else if (e.key === "ArrowLeft") orNav(-1);
+});
 
 document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{
   tab = b.dataset.tab; document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b)); render();
