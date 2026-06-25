@@ -27,7 +27,17 @@ function parseCSV(t) {
 }
 
 const firstName = (f) => ((f || "there").trim().split(/\s+/)[0]) || "there";
-const SIG = 'Anant — AI engineer, IIT Bombay\nNot relevant? Just reply "no" and I\'ll stop.';
+const SITE = process.env.DOOT_SITE || "2147doot.pages.dev";
+const SIG = "Anant — AI engineer, IIT Bombay";
+const PS = 'P.S. Not relevant? Just reply "no" and I\'ll stop.';
+
+// strip legal suffixes / wrapping quotes so the name reads naturally in copy
+function cleanCompany(raw) {
+  let s = (raw || "your company").trim().replace(/^['"]+|['"]+$/g, "").trim();
+  s = s.replace(/[,]?\s*(pvt\.?\s*ltd\.?|private\s+limited|llp|llc|inc\.?|ltd\.?|co\.?)\s*$/i, "").trim();
+  s = s.replace(/^['"]+|['"]+$/g, "").trim();
+  return s || (raw || "your company").trim();
+}
 
 function draft({ first, company, industry, emp }) {
   const n = parseInt((emp || "").replace(/[^0-9]/g, ""), 10) || 0;
@@ -38,20 +48,20 @@ function draft({ first, company, industry, emp }) {
     return {
       persona: "staffing",
       subject: `quick one for ${company}`,
-      body: `Hi ${first},\n\nReaching out because ${company} is in staffing — and winning new clients usually means outbound that eats your team's week.\n\nDoot is an AI sales agent: it finds the right companies, writes a real email to the person who can say yes, sends it, and follows up. This email? Written and sent by that agent.\n\nFor a staffing firm that means ${sizeLine}.\n\nWorth a 10-min look?\n\n${SIG}`,
+      body: `Hi ${first},\n\nSaw ${company} is in staffing — and winning new clients usually means outbound that eats your team's week.\n\nDoot is an AI sales agent: it finds the right companies, writes a real email to the person who can say yes, sends it, and follows up. Proof — Doot wrote and sent this email itself. Watch it work: ${SITE}\n\nFor a staffing firm that's ${sizeLine}. Worth a 10-min look? No deck, no obligation.\n\n${SIG}\n${PS}`,
     };
   }
   if (ind.includes("marketing") || ind.includes("advertis") || ind.includes("public relations") || ind.includes("media")) {
     return {
       persona: "marketing",
       subject: `your outbound, on autopilot`,
-      body: `Hi ${first},\n\n${company} sells outbound for a living — so you know how much research and writing goes into emails that still get ignored.\n\nDoot is an AI agent that does the discovery, personalizes every email, sends, and follows up. You could even run it for your own clients, under your brand. This message was written and sent by that agent.\n\nWorth a quick look?\n\n${SIG}`,
+      body: `Hi ${first},\n\n${company} runs outbound for a living — so you know the hours that go into researching and writing emails that still get ignored.\n\nDoot is an AI agent that finds the right companies, writes a real email to the person who can say yes, sends it, and follows up. You could even run it for your own clients, under your brand.\n\nProof: Doot wrote and sent this email itself. Watch it work: ${SITE}\n\nWorth 10 minutes? No deck, no obligation.\n\n${SIG}\n${PS}`,
     };
   }
   return {
     persona: "general",
     subject: `quick one for ${company}`,
-    body: `Hi ${first},\n\nOutbound — finding the right companies, writing a real email, following up — usually eats more time than it should.\n\nDoot is an AI sales agent that does all of it on its own, from your inbox. This email was written and sent by that agent — that's the demo.\n\nFor ${company} that means ${sizeLine}.\n\nWorth a 10-min look?\n\n${SIG}`,
+    body: `Hi ${first},\n\nOutbound — finding the right companies, writing real emails, following up — eats more time than it should.\n\nDoot is an AI sales agent that does all of it on its own, from your inbox. Proof: it wrote and sent this email. Watch it work: ${SITE}\n\nFor ${company} that's ${sizeLine}. Worth a 10-min look? No deck, no obligation.\n\n${SIG}\n${PS}`,
   };
 }
 
@@ -69,7 +79,7 @@ for (const fn of files) {
     const rec = {
       first: firstName(row[idx("First Name")]),
       name: `${row[idx("First Name")] || ""} ${row[idx("Last Name")] || ""}`.trim(),
-      company: (row[idx("Company Name")] || "your company").trim(),
+      company: cleanCompany(row[idx("Company Name")]),
       title: row[idx("Title")] || "",
       industry: row[idx("Industry")] || "",
       emp: row[idx("# Employees")] || "",
