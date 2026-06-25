@@ -96,3 +96,35 @@ export async function listEvents(DB, { event, visitor_id, sinceTs = 0, limit = 2
   const { results } = await DB.prepare(sql).bind(...vals).all();
   return results;
 }
+
+/* ---------------- outreach (outbound draft → review → send) ---------------- */
+const OUTREACH_COLS = ["created_ts","email","name","company","title","industry","emp","city","subject","body","persona","status"];
+
+export async function importOutreach(DB, rows) {
+  if (!rows.length) return 0;
+  const sql = `INSERT OR IGNORE INTO outreach (${OUTREACH_COLS.join(",")}) VALUES (${OUTREACH_COLS.map(() => "?").join(",")})`;
+  const stmts = rows.map((r) => DB.prepare(sql).bind(...OUTREACH_COLS.map((c) => r[c] ?? null)));
+  const res = await DB.batch(stmts);
+  return res.reduce((n, x) => n + ((x.meta && x.meta.changes) || 0), 0);
+}
+
+export async function listOutreach(DB, status) {
+  let sql = "SELECT * FROM outreach";
+  const vals = [];
+  if (status) { sql += " WHERE status = ?"; vals.push(status); }
+  sql += " ORDER BY company COLLATE NOCASE ASC, id ASC LIMIT 1000";
+  const { results } = await DB.prepare(sql).bind(...vals).all();
+  return results;
+}
+
+export async function updateOutreach(DB, id, fields) {
+  const sets = [], vals = [];
+  for (const k of ["status", "subject", "body"]) {
+    if (typeof fields[k] === "string") { sets.push(`${k} = ?`); vals.push(fields[k]); }
+  }
+  if (fields.error === null || typeof fields.error === "string") { sets.push("error = ?"); vals.push(fields.error); }
+  if (typeof fields.sent_ts === "number") { sets.push("sent_ts = ?"); vals.push(fields.sent_ts); }
+  if (!sets.length) return;
+  vals.push(id);
+  await DB.prepare(`UPDATE outreach SET ${sets.join(", ")} WHERE id = ?`).bind(...vals).run();
+}

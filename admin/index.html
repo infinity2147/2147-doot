@@ -24,6 +24,20 @@
   #drawer.open{transform:none}#drawer .x{float:right;cursor:pointer;color:var(--muted)}
   .tl{list-style:none;margin-top:12px}.tl li{padding:6px 0;border-bottom:1px solid var(--line);font-size:.85rem}
   .hide{display:none}
+  .orbar{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap}
+  .ocard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+  .ocard.approved{border-color:#2ea043;box-shadow:inset 3px 0 0 #2ea043}
+  .ocard.skipped{opacity:.5}
+  .ocard.sent{border-color:#9aa3b2;background:#fafbfd}
+  .ocard.failed{border-color:#d1242f;box-shadow:inset 3px 0 0 #d1242f}
+  .ohead{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  .ocard input,.ocard textarea{width:100%;padding:.5rem .6rem;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:.88rem;margin:4px 0}
+  .ocard textarea{resize:vertical;white-space:pre-wrap;line-height:1.5}
+  .obtns{display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap}
+  .obtns button{padding:.4rem .85rem;border:1px solid var(--line);background:#fff;border-radius:8px;cursor:pointer;font-size:.85rem}
+  .obtns .ok{background:var(--ember);color:#fff;border-color:var(--ember)}
+  .pchip{background:#EEF2FB;border-radius:999px;padding:1px 8px;font-size:.7rem}
+  .ostatus{text-transform:uppercase;font-size:.7rem;letter-spacing:.04em;font-weight:700;color:var(--muted)}
 </style></head><body>
 <h1>Doot — Admin</h1><div class="sub">Custom analytics · leads · visitors</div>
 <div class="tabs">
@@ -31,6 +45,7 @@
   <button data-tab="leads">Lead Inbox</button>
   <button data-tab="visitors">Visitors</button>
   <button data-tab="events">Raw events</button>
+  <button data-tab="outreach">Outreach</button>
   <select id="range"><option value="today">Today</option><option value="7d" selected>7 days</option><option value="30d">30 days</option></select>
 </div>
 <div id="view"></div>
@@ -81,6 +96,15 @@ async function render(){
         <td>${v.asn_org?`${esc(v.asn_org)}${v.city?", "+esc(v.city):""}`:(esc(v.country)||"anonymous")}</td>
         <td>${v.events}</td><td>${badge(v.intent.bucket)} ${v.intent.score}</td><td>${fmt(v.last_ts)}</td></tr>`).join("")||"<tr><td colspan=5>No visitors yet</td></tr>"}
     </table>`;
+  } else if (tab === "outreach"){
+    const d = await get(`/admin/api/outreach`);
+    const items = d.items || [];
+    const n = (s) => items.filter(x => x.status === s).length;
+    view.innerHTML = `<div class="orbar">
+      <b>${items.length}</b> drafts · <span style="color:#1a7f37">${n("approved")} approved</span> · ${n("skipped")} skipped · <b>${n("sent")}</b> sent · ${n("failed")} failed · ${n("draft")} to review
+      <span class="sub" style="margin-left:auto">Edit any text, hit Approve on the ones to send, then run <code>npm run outreach:send</code> (test first).</span>
+    </div>
+    ${items.map(orCard).join("") || "<p>No drafts yet. Run <code>node scripts/outreach-generate.mjs</code>.</p>"}`;
   } else {
     const d = await get(`/admin/api/events?range=${range()}`);
     view.innerHTML = `<table><tr><th>When</th><th>Event</th><th>Visitor</th><th>Props</th></tr>
@@ -103,6 +127,29 @@ async function openVisitor(vid){
 }
 function closeDrawer(){ $("#drawer").classList.remove("open"); }
 async function setStatus(id, status){ await fetch(`/admin/api/lead/${id}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body: JSON.stringify({status}) }); }
+
+function orCard(x){
+  const dis = x.status === "sent" ? "disabled" : "";
+  return `<div class="ocard ${esc(x.status)}" id="oc-${x.id}">
+    <div class="ohead">
+      <div><b>${esc(x.name)||"—"}</b> · ${esc(x.company)||""} <span class="sub">${esc(x.title||"")}</span></div>
+      <div class="sub">${esc(x.email)} · <span class="pchip">${esc(x.persona)}</span> · <span class="ostatus">${esc(x.status)}</span></div>
+    </div>
+    <input id="subj-${x.id}" value="${esc(x.subject)}" ${dis}>
+    <textarea id="body-${x.id}" rows="9" ${dis}>${esc(x.body)}</textarea>
+    <div class="obtns">
+      <button class="ok" onclick="approveOutreach(${x.id})" ${dis}>✓ Approve</button>
+      <button onclick="skipOutreach(${x.id})" ${dis}>Skip</button>
+      <button onclick="draftOutreach(${x.id})" ${dis}>↺ Draft</button>
+      ${x.sent_ts ? `<span class="sub">sent ${fmt(x.sent_ts)}</span>` : ""}
+      ${x.error ? `<span class="sub" style="color:#d1242f">error: ${esc(x.error)}</span>` : ""}
+    </div>
+  </div>`;
+}
+async function patchOutreach(id, body){ await fetch(`/admin/api/outreach/${id}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) }); }
+async function approveOutreach(id){ await patchOutreach(id, { status:"approved", subject:$(`#subj-${id}`).value, body:$(`#body-${id}`).value }); render(); }
+async function skipOutreach(id){ await patchOutreach(id, { status:"skipped" }); render(); }
+async function draftOutreach(id){ await patchOutreach(id, { status:"draft" }); render(); }
 
 document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{
   tab = b.dataset.tab; document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b)); render();

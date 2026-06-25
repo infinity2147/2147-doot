@@ -8,10 +8,15 @@
     "dev": "wrangler pages dev",
     "db:migrate:local": "wrangler d1 migrations apply doot-analytics --local",
     "db:migrate:remote": "wrangler d1 migrations apply doot-analytics --remote",
-    "deploy": "wrangler pages deploy"
+    "build": "rm -rf dist && mkdir -p dist && cp doot.html dist/ && cp -r admin assets functions dist/",
+    "deploy": "npm run build && wrangler pages deploy dist --project-name 2147doot --branch main --commit-dirty true",
+    "outreach:generate": "node scripts/outreach-generate.mjs",
+    "outreach:send": "node scripts/outreach-send.mjs",
+    "outreach:send:live": "node scripts/outreach-send.mjs --live --confirm"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.8.0",
+    "nodemailer": "^6.10.1",
     "vitest": "^3.2.6",
     "wrangler": "^3.90.0"
   }
